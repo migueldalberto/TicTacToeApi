@@ -1,33 +1,6 @@
-namespace TicTacToeApi;
+namespace TicTacToeApi.TicTacToe;
 
-// class for dealing with boards positions
-class BoardPosition
-{
-    private int _boardArrayIndex;
-    
-    public BoardPosition (int index)
-    {
-        if (index >= 0 && index < 9)
-            _boardArrayIndex = index;
-    }
-
-    public int ToArrayIndex() => _boardArrayIndex;
-
-    public BoardPosition Up() => new BoardPosition(_boardArrayIndex - 3 > 0 ? _boardArrayIndex -3 : _boardArrayIndex + 6);
-    public BoardPosition Down() => new BoardPosition(_boardArrayIndex + 3 < 9 ? _boardArrayIndex + 3 : _boardArrayIndex - 6);
-    public BoardPosition Left() => new BoardPosition(_boardArrayIndex % 3 == 0 ? _boardArrayIndex + 2 : _boardArrayIndex - 1);
-    public BoardPosition Right() => new BoardPosition(_boardArrayIndex - 2 % 3 == 0 ? _boardArrayIndex - 2 : _boardArrayIndex + 1);
-
-    public BoardPosition NextDiagonalSquare() => TicTacToeGame.diagonalA.Contains(_boardArrayIndex) ? Down().Right() : Down().Left();
-
-    public BoardPosition LeftDownDiagonal() => Left().Down();
-    public BoardPosition RightDownDiagonal() => Right().Down();
-
-    public bool IsAlignedToDiagonal() => TicTacToeGame.diagonalA.Contains(_boardArrayIndex) || TicTacToeGame.diagonalB.Contains(_boardArrayIndex);
-    public bool IsCorner() => _boardArrayIndex == 0 || _boardArrayIndex == 2 || _boardArrayIndex == 6 || _boardArrayIndex == 8;
-}
-
-class TicTacToeGame
+class Game
 {
     private string _board = "         ";
     private char _playingAs;
@@ -41,117 +14,86 @@ class TicTacToeGame
         get => _board; 
         set
         {
-            if (IsValidBoard(value)) 
+            if (TicTacToeBoard.IsBoardValid(value)) 
                 _board = value;
         }
     }
 
-    public TicTacToeGame(string board, char playingAs)
+    public Game(string board, char playingAs)
     {
         Board = board;
         _playingAs = playingAs;
-        if (_playingAs == 'o')
-            _opponent = 'x';
-        else
-            _opponent = 'o';
+        _opponent = _playingAs == 'o' ? 'x' : 'o';
     }
 
     public string OptimalPlay ()
     {
         if (TryWin(out int i))
             return MakeMove(i);
-        else if (TryBlock(out i))
+        if (TryBlock(out i))
             return MakeMove(i);
-        else if (TryFork(out i))
+        if (TryFork(out i))
             return MakeMove(i);
-        else if (TryBlockFork(out i))
+        if (TryBlockFork(out i))
             return MakeMove(i);
-        else if (TryCenter(out i))
+        if (TryCenter(out i))
             return MakeMove(i);
-        else if (TryOppositeCorner(out i))
+        if (TryOppositeCorner(out i))
             return MakeMove(i);
-        else if (TryEmptyCorner(out i))
+        if (TryEmptyCorner(out i))
             return MakeMove(i);
-        else 
+    
+        TryEmptySide(out i);
+        return MakeMove(i);
+    }
+
+    public bool CompleteThreeInARow(out int i, char player)
+    {
+        for (i = 0; i < 9; ++i)
         {
-            TryEmptySide(out i);
-            return MakeMove(i);
+            BoardPosition position = new BoardPosition(i);
+            if (BoardAt(position) != ' ') 
+                continue;
+
+            if (
+                ArePositionsOf(position.Up().Up(), position.Up(), player) ||
+                ArePositionsOf(position.Left().Left(), position.Left(), player)
+            )
+            {
+                if (!(position.IsAlignedToDiagonal())) 
+                    return true;
+                else
+                {
+                    if (i != 4)
+                    {
+                        if (ArePositionsOf(position.NextOnDiagonal(), position.NextOnDiagonal().NextOnDiagonal(), player))
+                            return true;
+                    }
+                    else
+                    {
+                        if (ArePositionsOf(position.Down().Left(), position.Down().Left().Down().Left(), player))
+                            return true;
+                        if (ArePositionsOf(position.Down().Right(), position.Down().Right().Down().Right(), player))
+                            return true;
+                    }
+                }
+            }
         }
+        i = -1;
+        return false;
     }
 
     // 1. Win: If the player has two in a row, they can place a third to get three in a row.
     // returns true and out index to play if win is possible, returns false and index -1 if otherwise
     public bool TryWin (out int i)
     {
-        for (i = 0; i < 9; ++i)
-        {
-            BoardPosition position = new BoardPosition(i);
-            if (BoardAt(position) != ' ') 
-                continue;
-
-            if (
-                ArePlayerPositions(position.Up().Up(), position.Up()) ||
-                ArePlayerPositions(position.Left().Left(), position.Left())
-            )
-            {
-                if (!(position.IsAlignedToDiagonal())) 
-                    return true;
-                else
-                {
-                    if (i != 4)
-                    {
-                        if (ArePlayerPositions(position.NextDiagonalSquare(), position.NextDiagonalSquare().NextDiagonalSquare()))
-                            return true;
-                    }
-                    else
-                    {
-                        if (ArePlayerPositions(position.Down().Left(), position.Down().Left().Down().Left()))
-                            return true;
-                        if (ArePlayerPositions(position.Down().Right(), position.Down().Right().Down().Right()))
-                            return true;
-                    }
-                }
-            }
-        }
-        i = -1;
-        return false;
+        return CompleteThreeInARow(out i, _playingAs);
     }
     // 2. Block: If the opponent has two in a row, the player must play the third themselves to block the opponent.
     // returns true and out index to play if block is possible, returns false and index -1 if otherwise
     public bool TryBlock (out int i)
     {
-        for (i = 0; i < 9; ++i)
-        {
-            BoardPosition position = new BoardPosition(i);
-            if (BoardAt(position) != ' ') 
-                continue;
-
-            if (
-                AreOpponentPositions(position.Up().Up(), position.Up()) ||
-                AreOpponentPositions(position.Left().Left(), position.Left())
-            )
-            {
-                if (!(position.IsAlignedToDiagonal())) 
-                    return true;
-                else
-                {
-                    if (i != 4)
-                    {
-                        if (AreOpponentPositions(position.NextDiagonalSquare(), position.NextDiagonalSquare().NextDiagonalSquare()))
-                            return true;
-                    }
-                    else
-                    {
-                        if (AreOpponentPositions(position.Down().Left(), position.Down().Left().Down().Left()))
-                            return true;
-                        if (AreOpponentPositions(position.Down().Right(), position.Down().Right().Down().Right()))
-                            return true;
-                    }
-                }
-            }
-        }
-        i = -1;
-        return false;
+        return CompleteThreeInARow(out i, _opponent);
     }
     // 3. Fork: Create an opportunity where the player has two ways to win (two non-blocked lines of 2).
     public bool TryFork(out int i)
@@ -166,7 +108,7 @@ class TicTacToeGame
         i = -1;
         return false;
     }
-    // 4. Blocking an opponent's fork: If there is only one possible fork for the opponent, the player should block it. Otherwise, the player should block all forks in any way that simultaneously allows them to create two in a row. Otherwise, the player should create a two in a row to force the opponent into defending, as long as it doesn't result in them creating a fork. For example, if "X" has two opposite corners and "O" has the center, "O" must not play a corner // move in order to win. (Playing a corner move in this scenario creates a fork for "X" to win.)
+    // 4. Blocking an opponent's fork: If there is only one possible fork for the opponent, the player should block it. Otherwise, the player should block all forks in any way that simultaneously allows them to create two in a row. Otherwise, the player should create a two in a row to force the opponent into defending, as long as it doesn't result in them creating a fork. For example, if "X" has two opposite corners and "O" has the center, "O" must not play a corner move in order to win. (Playing a corner move in this scenario creates a fork for "X" to win.)
     public bool TryBlockFork(out int i)
     {
         for (i = 0; i < 9; ++i)
@@ -196,6 +138,11 @@ class TicTacToeGame
             i = 8;
             return true;
         }
+        else if (_board[8] == _opponent && _board[0] == ' ')
+        {
+            i = 0;
+            return true;
+        }
         else if (_board[2] == _opponent && _board[6] == ' ')
         {
             i = 6;
@@ -204,11 +151,6 @@ class TicTacToeGame
         else if (_board[6] == _opponent && _board[2] == ' ')
         {
             i = 2;
-            return true;
-        }
-        else if (_board[8] == _opponent && _board[0] == ' ')
-        {
-            i = 0;
             return true;
         }
 
@@ -261,7 +203,7 @@ class TicTacToeGame
         {
             if (i != 4)
             {
-                if (ArePositionsOf(position.NextDiagonalSquare(), position.NextDiagonalSquare().NextDiagonalSquare(), player))
+                if (ArePositionsOf(position.NextOnDiagonal(), position.NextOnDiagonal().NextOnDiagonal(), player))
                     ++count;
             }
             else
@@ -289,26 +231,13 @@ class TicTacToeGame
 
     public bool ArePositionsOf (BoardPosition position1, BoardPosition position2, char player)
     {
-        if (player == _playingAs)
-            return ArePlayerPositions(position1, position2);
-        else
-            return AreOpponentPositions(position1, position2);
+        return player == _playingAs ?
+            BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _playingAs
+            :
+            BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _opponent;
     }
 
-    public bool ArePlayerPositions (BoardPosition position1, BoardPosition position2)
-    {
-        return BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _playingAs;
-    }
-
-    public bool AreOpponentPositions (BoardPosition position1, BoardPosition position2)
-    {
-        return BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _opponent;
-    }
-
-    public char BoardAt (BoardPosition position)
-    {
-        return _board[position.ToArrayIndex()];
-    }
+    public char BoardAt (BoardPosition position) => _board[position.ToArrayIndex()];
 
     public string MakeMove (int index)
     {
@@ -320,9 +249,10 @@ class TicTacToeGame
         return Board;
     }
     
-    // verifies that board is with equal number of Os and Xs or less Os than Xs
-    // this garantees the possibility of being o's turn
-    public bool IsOsTurn ()
+    // verifies that board is with equal number of player marks and opponent marks
+    // this garantees the possibility of being player's turn
+    // it also verifies that the difference between opponent marks and player marks is not greater than 2, which would invalidate the board
+    public bool PlayersTurn ()
     {
         int OCount = 0;
         int XCount = 0;
@@ -333,7 +263,10 @@ class TicTacToeGame
             else if (_board[i] == 'x')
                 ++XCount;
         }
-        return OCount <= XCount;
+        return _playingAs == 'o' ?
+            OCount <= XCount && XCount - OCount < 2
+            :
+            XCount <= OCount && OCount - XCount < 2;
     }
 
     public bool IsGameOver ()
@@ -348,8 +281,8 @@ class TicTacToeGame
                 (current == BoardAt(position.Up()) && current == BoardAt(position.Up().Up())) ||
                 (current == BoardAt(position.Left()) && current == BoardAt(position.Left().Left())) ||
                 (position.IsAlignedToDiagonal() && 
-                current == BoardAt(position.NextDiagonalSquare()) && 
-                current == BoardAt(position.NextDiagonalSquare().NextDiagonalSquare()))
+                current == BoardAt(position.NextOnDiagonal()) && 
+                current == BoardAt(position.NextOnDiagonal().NextOnDiagonal()))
             )
                 return true;
             else continue;
@@ -357,18 +290,4 @@ class TicTacToeGame
         return false;
     }
 
-    // verifies that the board string is 9 length and only contains x's, o's or spaces
-    public static bool IsValidBoard (string board) 
-    {
-        if (board.Length != 9) 
-            return false;
-
-        for (int i = 0; i < 9; ++i)
-        {
-            if (board[i] != ' ' && board[i] != 'x' && board[i] != 'o')
-                return false;
-        }
-        
-        return true;
-    }
 }

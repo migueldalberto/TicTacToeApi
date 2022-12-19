@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TicTacToeApi.TicTacToe;
 
 namespace TicTacToeApi.Controllers;
 
@@ -14,19 +15,19 @@ public class TicTacToeController : ControllerBase
     }
 
     [HttpGet(Name = "board")]
-    public IActionResult Get([FromQuery] string board)
+    public IActionResult Get([FromQuery] string board="         ")
     {
-        TicTacToeGame game; 
-        if (!TicTacToeGame.IsValidBoard(board))
-            return BadRequest();
+        Game game; 
+        if (!TicTacToeBoard.IsBoardValid(board))
+            return BadRequest("Invalid board");
 
-        game = new TicTacToeGame(board, 'o');
+        game = new Game(board, 'o');
 
-        if (!game.IsOsTurn())
-            return BadRequest();
+        if (!game.PlayersTurn())
+            return BadRequest("Not possibly O's turn");
 
         if (game.IsGameOver())
-            return BadRequest();
+            return BadRequest("Game is over");
 
         return Ok(game.OptimalPlay());
     }
