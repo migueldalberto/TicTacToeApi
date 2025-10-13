@@ -12,7 +12,7 @@ Tic-tac-toe board. The squares are put by rows, from the top left one to the bot
 
 The server always plays with O. 
 
-## How to build
+## How to run
 
 Requirements:
 - .NET 9.0
