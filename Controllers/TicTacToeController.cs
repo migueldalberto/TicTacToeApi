@@ -4,7 +4,7 @@ using TicTacToeApi.TicTacToe;
 namespace TicTacToeApi.Controllers;
 
 [ApiController]
-[Route("/")]
+[Route("/play")]
 public class TicTacToeController : ControllerBase
 {
     private readonly ILogger<TicTacToeController> _logger;
@@ -15,9 +15,9 @@ public class TicTacToeController : ControllerBase
     }
 
     [HttpGet(Name = "board")]
-    public IActionResult Get([FromQuery] string board="         ")
+    public IActionResult Get([FromQuery] string board = "         ")
     {
-        Game game; 
+        Game game;
         if (!TicTacToeBoard.IsBoardValid(board))
             return BadRequest("Invalid board");
 
