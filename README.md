@@ -17,5 +17,7 @@ The server always plays with O.
 Requirements:
 - .NET 9.0
 
-`dotnet build`
+Instructions:
+
+`dotnet run`
 
