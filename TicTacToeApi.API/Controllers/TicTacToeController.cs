@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using TicTacToeApi.TicTacToe;
+using TicTacToeApi.API.TicTacToe;
 
-namespace TicTacToeApi.Controllers;
+namespace TicTacToeApi.API.Controllers;
 
 [ApiController]
 [Route("/play")]

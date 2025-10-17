@@ -1,6 +1,6 @@
-namespace TicTacToeApi.TicTacToe;
+namespace TicTacToeApi.API.TicTacToe;
 
-class Game
+public class Game
 {
     private string _board = "         ";
     private char _playingAs;
@@ -9,12 +9,12 @@ class Game
     public static readonly int[] diagonalA = { 0, 4, 8 };
     public static readonly int[] diagonalB = { 2, 4, 6 };
 
-    public string Board 
-    { 
-        get => _board; 
+    public string Board
+    {
+        get => _board;
         set
         {
-            if (TicTacToeBoard.IsBoardValid(value)) 
+            if (TicTacToeBoard.IsBoardValid(value))
                 _board = value;
         }
     }
@@ -26,162 +26,164 @@ class Game
         _opponent = _playingAs == 'o' ? 'x' : 'o';
     }
 
-    public string OptimalPlay ()
+    public string OptimalPlay()
     {
-        if (TryWin(out int i))
+        int i = -1;
+        if ((i = TryWin()) != -1)
             return MakeMove(i);
-        if (TryBlock(out i))
+        if ((i = TryBlock()) != -1)
             return MakeMove(i);
-        if (TryFork(out i))
+        if ((i = TryFork()) != -1)
             return MakeMove(i);
-        if (TryBlockFork(out i))
+        if ((i = TryBlockFork()) != -1)
             return MakeMove(i);
-        if (TryCenter(out i))
+        if ((i = TryCenter()) != -1)
             return MakeMove(i);
-        if (TryOppositeCorner(out i))
+        if ((i = TryOppositeCorner()) != -1)
             return MakeMove(i);
-        if (TryEmptyCorner(out i))
+        if ((i = TryEmptyCorner()) != -1)
             return MakeMove(i);
-    
-        TryEmptySide(out i);
+
+        i = TryEmptySide();
         return MakeMove(i);
     }
 
-    public bool CompleteThreeInARow(out int i, char player)
+    public int CompleteThreeInARow(char player)
     {
-        for (i = 0; i < 9; ++i)
+        for (int i = 0; i < 9; ++i)
         {
             BoardPosition position = new BoardPosition(i);
-            if (BoardAt(position) != ' ') 
+            if (BoardAt(position) != ' ')
                 continue;
 
             if (
                 ArePositionsOf(position.Up().Up(), position.Up(), player) ||
                 ArePositionsOf(position.Left().Left(), position.Left(), player)
             )
+                return i;
+
+            if (Game.diagonalA.Contains(position.ToArrayIndex()))
             {
-                if (!(position.IsAlignedToDiagonal())) 
-                    return true;
-                else
-                {
-                    if (i != 4)
-                    {
-                        if (ArePositionsOf(position.NextOnDiagonal(), position.NextOnDiagonal().NextOnDiagonal(), player))
-                            return true;
-                    }
-                    else
-                    {
-                        if (ArePositionsOf(position.Down().Left(), position.Down().Left().Down().Left(), player))
-                            return true;
-                        if (ArePositionsOf(position.Down().Right(), position.Down().Right().Down().Right(), player))
-                            return true;
-                    }
-                }
+                if (ArePositionsOf(position.Down().Right(), position.Down().Right().Down().Right(), player))
+                    return i;
+            }
+            else if (Game.diagonalB.Contains(position.ToArrayIndex()))
+            {
+                if (ArePositionsOf(position.Down().Left(), position.Down().Left().Down().Left(), player))
+                    return i;
             }
         }
-        i = -1;
-        return false;
+        return -1;
     }
 
     // 1. Win: If the player has two in a row, they can place a third to get three in a row.
     // returns true and out index to play if win is possible, returns false and index -1 if otherwise
-    public bool TryWin (out int i)
+    public int TryWin()
     {
-        return CompleteThreeInARow(out i, _playingAs);
+        return CompleteThreeInARow(_playingAs);
     }
     // 2. Block: If the opponent has two in a row, the player must play the third themselves to block the opponent.
     // returns true and out index to play if block is possible, returns false and index -1 if otherwise
-    public bool TryBlock (out int i)
+    public int TryBlock()
     {
-        return CompleteThreeInARow(out i, _opponent);
+        return CompleteThreeInARow(_opponent);
     }
     // 3. Fork: Create an opportunity where the player has two ways to win (two non-blocked lines of 2).
-    public bool TryFork(out int i)
+    public int TryFork()
     {
-        for (i = 0; i < 9; ++i)
+        if (BoardAt(0) == _playingAs && BoardAt(8) == _playingAs)
         {
-            if (i != ' ') continue;
-
-            if (CountAligned(i) >= 2)
-                return true;
+            if (BoardAt(6) == ' ')
+                return 6;
+            else if (BoardAt(2) == ' ')
+                return 2;
         }
-        i = -1;
-        return false;
+
+        if (BoardAt(2) == _playingAs && BoardAt(6) == _playingAs)
+        {
+            if (BoardAt(0) == ' ')
+                return 0;
+            else if (BoardAt(8) == ' ')
+                return 8;
+
+        }
+
+        return -1;
     }
-    // 4. Blocking an opponent's fork: If there is only one possible fork for the opponent, the player should block it. Otherwise, the player should block all forks in any way that simultaneously allows them to create two in a row. Otherwise, the player should create a two in a row to force the opponent into defending, as long as it doesn't result in them creating a fork. For example, if "X" has two opposite corners and "O" has the center, "O" must not play a corner move in order to win. (Playing a corner move in this scenario creates a fork for "X" to win.)
-    public bool TryBlockFork(out int i)
-    {
-        for (i = 0; i < 9; ++i)
-        {
-            if (i != ' ') continue;
 
-            if (CountAligned(i, _opponent) >= 2)
-                return true;
+    // 4. Blocking an opponent's fork: If there is only one possible fork for the opponent, the player should block it. Otherwise, the player should block all forks in any way that simultaneously allows them to create two in a row. Otherwise, the player should create a two in a row to force the opponent into defending, as long as it doesn't result in them creating a fork. For example, if "X" has two opposite corners and "O" has the center, "O" must not play a corner move in order to win. (Playing a corner move in this scenario creates a fork for "X" to win.)
+    public int TryBlockFork()
+    {
+        if (BoardAt(0) == _opponent && BoardAt(8) == _opponent)
+        {
+            if (BoardAt(6) == ' ')
+                return 6;
+            else if (BoardAt(2) == ' ')
+                return 2;
         }
-        i = -1;
-        return false;
+
+        if (BoardAt(2) == _opponent && BoardAt(6) == _opponent)
+        {
+            if (BoardAt(0) == ' ')
+                return 0;
+            else if (BoardAt(8) == ' ')
+                return 8;
+
+        }
+
+        return -1;
     }
     // 5. Center: A player marks the center. (If it is the first move of the game, playing a corner move gives the second player more opportunities to make a mistake and may therefore be the better choice; however, it makes no difference between perfect players.)
-    public bool TryCenter(out int i)
+    public int TryCenter()
     {
-        i = 4;
-        if (_board[4] == ' ')
-            return true;
-        i = -1;
-        return false;
+        int i = 4;
+        if (_board[i] == ' ')
+            return i;
+        return -1;
     }
     // 6. Opposite corner: If the opponent is in the corner, the player plays the opposite corner.
-    public bool TryOppositeCorner(out int i)
+    public int TryOppositeCorner()
     {
         if (_board[0] == _opponent && _board[8] == ' ')
         {
-            i = 8;
-            return true;
+            return 8;
         }
         else if (_board[8] == _opponent && _board[0] == ' ')
         {
-            i = 0;
-            return true;
+            return 0;
         }
         else if (_board[2] == _opponent && _board[6] == ' ')
         {
-            i = 6;
-            return true;
+            return 6;
         }
         else if (_board[6] == _opponent && _board[2] == ' ')
         {
-            i = 2;
-            return true;
+            return 2;
         }
 
-        i = -1;
-        return false;
+        return -1;
     }
     // 7. Empty corner: The player plays in a corner square.
-    public bool TryEmptyCorner(out int i)
+    public int TryEmptyCorner()
     {
-        for (i = 0; i < 9; ++i)
+        for (int i = 0; i < 9; ++i)
         {
             BoardPosition position = new BoardPosition(i);
             if (BoardAt(position) != ' ') continue;
             if (position.IsCorner())
-                return true;
+                return i;
         }
-        i = -1;
-        return false;
+        return -1;
     }
     // 8. Empty side: The player plays in a middle square on any of the 4 sides 
-    public bool TryEmptySide(out int i)
+    public int TryEmptySide()
     {
-        for (i = 0; i < 9; ++i)
+        for (int i = 1; i < 9; i += 2)
         {
-            BoardPosition position = new BoardPosition(i);
-            if (BoardAt(position) != ' ') continue;
-
-            return true;
+            if (BoardAt(i) == ' ')
+                return i;
         }
-        i = -1;
-        return false;
+        return -1;
     }
 
     public int CountAligned(BoardPosition position, char player)
@@ -192,29 +194,29 @@ class Game
 
         int count = 0;
         if (BoardAt(position.Up()) == player)
-           ++count; 
+            ++count;
         if (BoardAt(position.Down()) == player)
             ++count;
         if (BoardAt(position.Left()) == player)
             ++count;
         if (BoardAt(position.Right()) == player)
             ++count;
-        if (position.IsAlignedToDiagonal()) 
+
+        if (Game.diagonalA.Contains(i))
         {
-            if (i != 4)
-            {
-                if (ArePositionsOf(position.NextOnDiagonal(), position.NextOnDiagonal().NextOnDiagonal(), player))
-                    ++count;
-            }
-            else
-            {
-                if (ArePositionsOf(position.Down().Left(), position.Down().Left().Down().Left(), player))
-                    ++count;
-                if (ArePositionsOf(position.Down().Right(), position.Down().Right().Down().Right(), player))
-                    ++count;
-            }
+            if (BoardAt(position.Down().Right()) == player)
+                ++count;
+            if (BoardAt(position.Down().Right().Down().Right()) == player)
+                ++count;
         }
-            ++count;
+
+        if (Game.diagonalB.Contains(i))
+        {
+            if (BoardAt(position.Down().Left()) == player)
+                ++count;
+            if (BoardAt(position.Down().Left().Down().Left()) == player)
+                ++count;
+        }
         return count;
     }
     public int CountAligned(int i)
@@ -229,7 +231,7 @@ class Game
         return CountAligned(position, player);
     }
 
-    public bool ArePositionsOf (BoardPosition position1, BoardPosition position2, char player)
+    public bool ArePositionsOf(BoardPosition position1, BoardPosition position2, char player)
     {
         return player == _playingAs ?
             BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _playingAs
@@ -237,22 +239,23 @@ class Game
             BoardAt(position1) == BoardAt(position2) && BoardAt(position1) == _opponent;
     }
 
-    public char BoardAt (BoardPosition position) => _board[position.ToArrayIndex()];
+    public char BoardAt(BoardPosition position) => _board[position.ToArrayIndex()];
+    public char BoardAt(int position) => _board[position];
 
-    public string MakeMove (int index)
+    public string MakeMove(int index)
     {
-        if (Board[index] != ' ') 
+        if (Board[index] != ' ')
             return Board;
         char[] newBoard = _board.ToArray();
         newBoard[index] = _playingAs;
         Board = new string(newBoard);
         return Board;
     }
-    
+
     // verifies that board is with equal number of player marks and opponent marks
     // this garantees the possibility of being player's turn
     // it also verifies that the difference between opponent marks and player marks is not greater than 2, which would invalidate the board
-    public bool PlayersTurn ()
+    public bool PlayersTurn()
     {
         int OCount = 0;
         int XCount = 0;
@@ -269,7 +272,7 @@ class Game
             XCount <= OCount && OCount - XCount < 2;
     }
 
-    public bool IsGameOver ()
+    public bool IsGameOver()
     {
         for (int i = 0; i < 9; i += 2)
         {
@@ -277,11 +280,11 @@ class Game
             if (current == ' ') continue;
             BoardPosition position = new BoardPosition(i);
 
-            if ( 
+            if (
                 (current == BoardAt(position.Up()) && current == BoardAt(position.Up().Up())) ||
                 (current == BoardAt(position.Left()) && current == BoardAt(position.Left().Left())) ||
-                (position.IsAlignedToDiagonal() && 
-                current == BoardAt(position.NextOnDiagonal()) && 
+                (position.IsAlignedToDiagonal() &&
+                current == BoardAt(position.NextOnDiagonal()) &&
                 current == BoardAt(position.NextOnDiagonal().NextOnDiagonal()))
             )
                 return true;

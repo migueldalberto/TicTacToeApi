@@ -1,11 +1,11 @@
-namespace TicTacToeApi.TicTacToe;
+namespace TicTacToeApi.API.TicTacToe;
 
 // class for dealing with boards positions
-class BoardPosition
+public class BoardPosition
 {
     private int _boardArrayIndex;
-    
-    public BoardPosition (int index)
+
+    public BoardPosition(int index)
     {
         if (index >= 0 && index < 9)
             _boardArrayIndex = index;
@@ -13,10 +13,10 @@ class BoardPosition
 
     public int ToArrayIndex() => _boardArrayIndex;
 
-    public BoardPosition Up() => new BoardPosition(_boardArrayIndex - 3 > 0 ? _boardArrayIndex -3 : _boardArrayIndex + 6);
+    public BoardPosition Up() => new BoardPosition(_boardArrayIndex - 3 > 0 ? _boardArrayIndex - 3 : _boardArrayIndex + 6);
     public BoardPosition Down() => new BoardPosition(_boardArrayIndex + 3 < 9 ? _boardArrayIndex + 3 : _boardArrayIndex - 6);
     public BoardPosition Left() => new BoardPosition(_boardArrayIndex % 3 == 0 ? _boardArrayIndex + 2 : _boardArrayIndex - 1);
-    public BoardPosition Right() => new BoardPosition(_boardArrayIndex - 2 % 3 == 0 ? _boardArrayIndex - 2 : _boardArrayIndex + 1);
+    public BoardPosition Right() => new BoardPosition((_boardArrayIndex - 2) % 3 == 0 ? _boardArrayIndex - 2 : _boardArrayIndex + 1);
 
     // returns index of down left or down right square
     // if _boardArrayIndex == 4, returns down right
@@ -26,12 +26,12 @@ class BoardPosition
     public bool IsCorner() => _boardArrayIndex == 0 || _boardArrayIndex == 2 || _boardArrayIndex == 6 || _boardArrayIndex == 8;
 }
 
-class TicTacToeBoard
+public class TicTacToeBoard
 {
     // verifies that the board string is 9 length and only contains x's, o's or spaces
-    public static bool IsBoardValid(string board) 
+    public static bool IsBoardValid(string board)
     {
-        if (board.Length != 9) 
+        if (board.Length != 9)
             return false;
 
         for (int i = 0; i < 9; ++i)
@@ -39,7 +39,7 @@ class TicTacToeBoard
             if (board[i] != ' ' && board[i] != 'x' && board[i] != 'o')
                 return false;
         }
-        
+
         return true;
     }
 }
